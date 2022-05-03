@@ -24,3 +24,4 @@ alfio-itest
 public/
 node_modules/
 lsp
+/src/main/docker/db/

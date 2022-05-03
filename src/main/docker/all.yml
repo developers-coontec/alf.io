@@ -1,0 +1,14 @@
+# This configuration is intended for development purpose, it's **your** responsibility to harden it for production
+version: '3.3'
+
+services:
+  event-psql:
+    container_name: event-psql
+    image: postgres:14.1-alpine
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=svuser
+      - POSTGRES_PASSWORD=survey2021!1
+    ports:
+      - 5432:5432

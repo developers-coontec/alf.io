@@ -14,7 +14,6 @@ buildscript {
 
     dependencies {
         classpath 'com.opentable.components:otj-pg-embedded:0.13.3'
-        classpath 'org.postgresql:postgresql:42.2.20'
         //this is for processing the index.html at compile time
         classpath "com.github.alfio-event:alf.io-public-frontend:$alfioPublicFrontendVersion"
         classpath "ch.digitalfondue.jfiveparse:jfiveparse:0.9.0"
@@ -42,6 +41,7 @@ plugins {
     id 'net.researchgate.release' version '2.8.1'
     id 'org.springframework.boot' version '2.5.12'
     id 'org.sonarqube' version '3.3'
+    id "org.liquibase.gradle"
     id 'net.ltgt.errorprone' version '2.0.1'
 	id 'com.github.node-gradle.node' version '3.1.0'
 }
@@ -65,23 +65,24 @@ task validate {
 def profile = project.hasProperty('profile') ? project.profile : 'dev'
 ext {
     // default settings
-    jettyPort = 8080
+    jettyPort = 8285
     jettyHost = '0.0.0.0'
-    datasourceUrl = 'jdbc:postgresql://localhost:5432/alfio'
-    datasourceUsername = 'postgres'
-    datasourcePassword = 'password'
+//    datasourceUrl = 'jdbc:gresql://localhost:5432/alfio'
+    datasourceUrl = 'jdbc:mysql://localhost:3306/alfio'
+    datasourceUsername = 'svuser'
+    datasourcePassword = 'survey2021!1'
     datasourceValidationQuery = 'SELECT 1'
     //springProfilesActive = 'dev
     //springProfilesActive = 'dev,demo'
     springProfilesActive = 'dev'
-    port = "8080"
+    port = "8285"
 
 
     switch (profile) {
         case 'docker-test':
-            datasourceUrl = 'jdbc:postgresql://0.0.0.0:5432/postgres'
-            datasourceUsername = 'postgres'
-            datasourcePassword = 'postgres'
+            datasourceUrl = 'jdbc:mysql://0.0.0.0:3306/alfio'
+            datasourceUsername = 'svuser'
+            datasourcePassword = 'survey2021!1'
             datasourceValidationQuery = 'SELECT 1'
             break
         case 'travis':
@@ -90,11 +91,55 @@ ext {
     }
 }
 
+if (!project.hasProperty("runList")) {
+    project.ext.runList = "main"
+}
+
+
+project.ext.diffChangelogFile = "src/main/resources/config/liquibase/changelog/" + new Date().format("yyyyMMddHHmmss") + "_changelog.xml"
+
+
+liquibase {
+    activities {
+        main {
+            driver "com.mysql.cj.jdbc.Driver"
+            url "jdbc:mysql://localhost:3306/alfio"
+            username "root"
+            password ""
+            changeLogFile "src/main/resources/config/liquibase/master.xml"
+            defaultSchemaName "survey"
+            logLevel "debug"
+            classpath "src/main/resources/"
+        }
+        diffLog {
+            driver "com.mysql.cj.jdbc.Driver"
+            url "jdbc:mysql://localhost:3306/alfio"
+            username "root"
+            password ""
+            changeLogFile project.ext.diffChangelogFile
+            referenceUrl "hibernate:spring:com.coontec.survey.domain?dialect=org.hibernate.dialect.MySQL57Dialect&hibernate.physical_naming_strategy=org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy&hibernate.implicit_naming_strategy=org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy"
+            defaultSchemaName "alfio"
+            logLevel "debug"
+            classpath "$buildDir/classes/java/main"
+            excludeObjects "oauth_access_token, oauth_approvals, oauth_client_details, oauth_client_token, oauth_code, oauth_refresh_token"
+        }
+    }
+
+    runList = project.ext.runList
+}
+
 configurations {
     compileOnly
     testCompileOnly
     providedRuntime
     providedCompile
+    all {
+        resolutionStrategy {
+            // Inherited version from Spring Boot can't be used because of regressions:
+            // To be removed as soon as spring-boot use the same version
+            force 'org.liquibase:liquibase-core:4.4.3'
+        }
+    }
 }
 
 repositories {
@@ -105,10 +150,47 @@ repositories {
     }
 }
 
+if (project.hasProperty("gae")) {
+    apply plugin: 'maven'
+    apply plugin: 'org.springframework.boot.experimental.thin-launcher'
+    apply plugin: 'io.spring.dependency-management'
+
+    dependencyManagement {
+        imports {
+            mavenBom "tech.jhipster:jhipster-dependencies:${jhipsterDependenciesVersion}"
+        }
+    }
+    appengineStage.dependsOn thinResolve
+}
+
 dependencies {
+
+    if (!project.hasProperty("gae")) {
+        implementation platform("tech.jhipster:jhipster-dependencies:${jhipsterDependenciesVersion}")
+    }
+
+    implementation group: "tech.jhipster", name: "jhipster-framework", {
+        exclude module : 'spring-boot-starter-logging'
+    }
+
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}", {
+        exclude module : 'spring-boot-starter-logging'
+    }
+
+    developmentOnly "org.springframework.boot:spring-boot-devtools:${springBootVersion}", {
+        exclude module : 'spring-boot-starter-logging'
+    }
+
+    implementation "org.zalando:problem-spring-web"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
     implementation 'com.auth0:java-jwt:3.19.0'
     implementation "com.fasterxml.jackson.core:jackson-core"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-hppc"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
+    implementation "com.fasterxml.jackson.module:jackson-module-jaxb-annotations"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-hibernate5"
+    implementation "com.fasterxml.jackson.core:jackson-annotations"
+    implementation "org.hibernate:hibernate-core"
     implementation "com.fasterxml.jackson.core:jackson-databind"
     implementation "org.springframework.boot:spring-boot-properties-migrator", {
         exclude module : 'spring-boot-starter-logging'
@@ -126,7 +208,25 @@ dependencies {
     implementation "com.google.zxing:core:3.4.1"
     implementation "com.google.zxing:javase:3.4.1"
     implementation "org.flywaydb:flyway-core"
-    implementation "org.postgresql:postgresql"
+    implementation "javax.transaction:javax.transaction-api"
+    implementation "org.hibernate:hibernate-entitymanager"
+    implementation "org.hibernate.validator:hibernate-validator"
+    implementation "org.liquibase:liquibase-core"
+    liquibaseRuntime "org.liquibase:liquibase-core"
+    liquibaseRuntime "org.liquibase.ext:liquibase-hibernate5:${liquibaseHibernate5Version}"
+    liquibaseRuntime sourceSets.main.compileClasspath
+    implementation "mysql:mysql-connector-java"
+    liquibaseRuntime "mysql:mysql-connector-java"
+    compileOnly 'org.projectlombok:lombok:1.18.20'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
+    testCompileOnly 'org.projectlombok:lombok:1.18.20'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
+    implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+    annotationProcessor "org.hibernate:hibernate-jpamodelgen:${hibernateVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa", {
+        exclude module : 'spring-boot-starter-logging'
+    }
     implementation "com.zaxxer:HikariCP"
 
     /* https://www.lunasec.io/docs/blog/log4j-zero-day/ */
@@ -163,7 +263,7 @@ dependencies {
     compileOnly "javax.servlet:javax.servlet-api:4.0.1"
     testImplementation "javax.servlet:javax.servlet-api:4.0.1"
     testImplementation 'org.testcontainers:testcontainers:1.16.2'
-    testImplementation 'org.testcontainers:postgresql:1.16.2'
+    testImplementation "com.h2database:h2"
     testImplementation 'org.testcontainers:junit-jupiter:1.16.2'
     testImplementation "org.springframework.boot:spring-boot-starter-test", {
         exclude module : 'spring-boot-starter-logging'
@@ -250,16 +350,16 @@ processResources {
 
     doLast {
 
-        final gradleProperties = new File((File) it.destinationDir, 'application.properties')
-        final properties = new Properties()
-
-        assert gradleProperties.file
-
-        gradleProperties.withReader { properties.load(it) }
-        properties['alfio.version'] = project.version
-        properties['alfio.build-ts'] = ZonedDateTime.now(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_ZONED_DATE_TIME)
-        properties['alfio.frontend.version'] = alfioPublicFrontendVersion
-        gradleProperties.withWriter { properties.store(it, null) }
+//        final gradleProperties = new File((File) it.destinationDir, 'application.properties')
+//        final properties = new Properties()
+//
+//        assert gradleProperties.file
+//
+//        gradleProperties.withReader { properties.load(it) }
+//        properties['alfio.version'] = project.version
+//        properties['alfio.build-ts'] = ZonedDateTime.now(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_ZONED_DATE_TIME)
+//        properties['alfio.frontend.version'] = alfioPublicFrontendVersion
+//        gradleProperties.withWriter { properties.store(it, null) }
 
 
         //

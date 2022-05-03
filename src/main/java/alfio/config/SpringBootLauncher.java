@@ -19,6 +19,7 @@ package alfio.config;
 import alfio.util.DefaultExceptionHandler;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 
@@ -39,7 +40,9 @@ public class SpringBootLauncher {
         SpringApplication application = new SpringApplication(
             SpringBootInitializer.class,
             BaseConfiguration.class,
-            DataSourceConfiguration.class,
+            LiquibaseProperties.class,
+            LiquibaseConfiguration.class,
+            DatabaseConfiguration.class,
             WebSecurityConfig.class,
             MvcConfiguration.class);
         List<String> additionalProfiles = new ArrayList<>();

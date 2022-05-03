@@ -29,7 +29,7 @@ public class ApplicationPropertiesConfiguration {
     @Profile("!"+Initializer.PROFILE_SPRING_BOOT)
     public static PropertySourcesPlaceholderConfigurer propertyPlaceholder() {
         PropertySourcesPlaceholderConfigurer configurer = new PropertySourcesPlaceholderConfigurer();
-        configurer.setLocation(new ClassPathResource("application.properties"));
+        configurer.setLocation(new ClassPathResource("application-dev.yml"));
         return configurer;
     }
 }

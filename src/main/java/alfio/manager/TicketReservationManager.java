@@ -132,7 +132,7 @@ import static org.apache.commons.lang3.time.DateUtils.truncate;
 @Log4j2
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class TicketReservationManager {
-    
+
     public static final String NOT_YET_PAID_TRANSACTION_ID = "not-paid";
     private static final String STUCK_TICKETS_MSG = "there are stuck tickets for the event %s. Please check admin area.";
     private static final String STUCK_TICKETS_SUBJECT = "warning: stuck tickets found";
@@ -1565,7 +1565,7 @@ public class TicketReservationManager {
 
     /**
      * Get the total cost with VAT if it's not included in the ticket price.
-     * 
+     *
      * @param reservationId
      * @return
      */
@@ -1849,26 +1849,26 @@ public class TicketReservationManager {
     String reservationUrl(String baseUrl, String reservationId, PurchaseContext purchaseContext, String userLanguage) {
         return StringUtils.removeEnd(baseUrl, "/") + "/" + purchaseContext.getType()+ "/" + purchaseContext.getPublicIdentifier() + "/reservation/" + reservationId + "?lang="+userLanguage;
     }
-    
+
     String reservationUrl(TicketReservation reservation, PurchaseContext purchaseContext) {
         return reservationUrl(configurationManager.baseUrl(purchaseContext), reservation.getId(), purchaseContext, reservation.getUserLanguage());
     }
 
     String ticketUrl(Event event, String ticketId) {
         Ticket ticket = ticketRepository.findByUUID(ticketId);
-    
+
         return configurationManager.baseUrl(event) + "/event/" + event.getShortName() + "/ticket/" + ticketId + "?lang=" + ticket.getUserLanguage();
     }
 
     public String ticketUpdateUrl(Event event, String ticketId) {
         Ticket ticket = ticketRepository.findByUUID(ticketId);
-        
+
         return configurationManager.baseUrl(event) + "/event/" + event.getShortName() + "/ticket/" + ticketId + "/update?lang=" + ticket.getUserLanguage();
     }
 
     public String ticketOnlineCheckIn(Event event, String ticketId) {
         Ticket ticket = ticketRepository.findByUUID(ticketId);
-        
+
         return ticketOnlineCheckInUrl(event, ticket, configurationManager.baseUrl(event));
     }
 
@@ -1888,7 +1888,7 @@ public class TicketReservationManager {
     public Optional<TicketReservation> findByIdForEvent(String reservationId, int eventId) {
         return ticketReservationRepository.findOptionalReservationByIdAndEventId(reservationId, eventId);
     }
-    
+
     public Optional<TicketReservation> findById(String reservationId) {
         return ticketReservationRepository.findOptionalReservationById(reservationId);
     }
@@ -2212,7 +2212,7 @@ public class TicketReservationManager {
                         Validate.isTrue(result == 1);
                         Map<String, Object> model = TemplateResource.prepareModelForReminderTicketAdditionalInfo(organizationRepository.getById(event.getOrganizationId()), event, t, ticketUpdateUrl(event, t.getUuid()));
                         Locale locale = Optional.ofNullable(t.getUserLanguage()).map(LocaleUtil::forLanguageTag).orElseGet(() -> findReservationLanguage(t.getTicketsReservationId()));
-                        notificationManager.sendSimpleEmail(event, t.getTicketsReservationId(), t.getEmail(), messageSource.getMessage("reminder.ticket-additional-info.subject", 
+                        notificationManager.sendSimpleEmail(event, t.getTicketsReservationId(), t.getEmail(), messageSource.getMessage("reminder.ticket-additional-info.subject",
                         		new Object[]{event.getDisplayName()}, locale), () -> templateManager.renderTemplate(event, TemplateResource.REMINDER_TICKET_ADDITIONAL_INFO, model, locale));
                     });
             return null;
@@ -2243,7 +2243,7 @@ public class TicketReservationManager {
                         Map<String, Object> model = prepareModelForReservationEmail(event, reservation);
                         ticketReservationRepository.updateLatestReminderTimestamp(reservation.getId(), ZonedDateTime.now(clockProvider.withZone(eventZoneId)));
                         Locale locale = findReservationLanguage(reservation.getId());
-                        notificationManager.sendSimpleEmail(event, reservation.getId(), reservation.getEmail(), messageSource.getMessage("reminder.ticket-not-assigned.subject", 
+                        notificationManager.sendSimpleEmail(event, reservation.getId(), reservation.getEmail(), messageSource.getMessage("reminder.ticket-not-assigned.subject",
                         		new Object[]{event.getDisplayName()}, locale), () -> templateManager.renderTemplate(event, TemplateResource.REMINDER_TICKETS_ASSIGNMENT_EMAIL, model, locale));
                     });
                 return null;
@@ -3037,19 +3037,7 @@ public class TicketReservationManager {
             log.trace("Applied subscription {} to {} tickets for reservation {}", subscriptionId, count, reservation.getId());
         } catch(UncategorizedSQLException sqlException) {
             log.trace("got exception while trying to apply SubscriptionID {} to ReservationID {}", subscriptionId, reservation.getId());
-            throw SqlUtils.findServerError(sqlException)
-                .map(serverError -> {
-                    if(serverError.getMessage() == null || serverError.getDetail() == null) {
-                        log.warn("Cannot retrieve ErrorDetails for SubscriptionID {} and ReservationID {}", subscriptionId, reservation.getId());
-                        return sqlException;
-                    }
-                    var errorDetails = json.fromJsonString(serverError.getDetail(), MaxEntriesOverageDetails.class);
-                    if(Objects.equals(serverError.getMessage(), SubscriptionUsageExceeded.ERROR)) {
-                        return new SubscriptionUsageExceeded(errorDetails.getAllowed(),errorDetails.getRequested());
-                    }
-                    return new SubscriptionUsageExceededForEvent(errorDetails.getAllowed(),errorDetails.getRequested());
-                })
-                .orElse(sqlException);
+            throw sqlException;
         }
         //
         var totalPrice = totalReservationCostWithVAT(reservation.getId()).getLeft();

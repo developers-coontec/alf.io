@@ -19,6 +19,7 @@ package alfio.config;
 import alfio.util.DefaultExceptionHandler;
 import com.openhtmltopdf.util.XRLog;
 import org.apache.commons.lang3.Validate;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.web.context.ConfigurableWebApplicationContext;
@@ -51,11 +52,11 @@ public class Initializer extends AbstractAnnotationConfigDispatcherServletInitia
         Thread.setDefaultUncaughtExceptionHandler(new DefaultExceptionHandler());
 
         configureSessionCookie(servletContext);
-        
+
         CharacterEncodingFilter cef = new CharacterEncodingFilter();
         cef.setEncoding("UTF-8");
         cef.setForceEncoding(true);
-        
+
         Dynamic characterEncodingFilter = servletContext.addFilter("CharacterEncodingFilter", cef);
         characterEncodingFilter.setAsyncSupported(true);
         characterEncodingFilter.addMappingForUrlPatterns(null, false, "/*");
@@ -78,7 +79,7 @@ public class Initializer extends AbstractAnnotationConfigDispatcherServletInitia
         SessionCookieConfig config = servletContext.getSessionCookieConfig();
 
         config.setHttpOnly(true);
-        
+
         Validate.notNull(environment, "environment cannot be null!");
         // set secure cookie only if current environment doesn't strictly need HTTP
         config.setSecure(environment.acceptsProfiles(Profiles.of(Initializer.PROFILE_LIVE)));
@@ -89,7 +90,8 @@ public class Initializer extends AbstractAnnotationConfigDispatcherServletInitia
 
     @Override
     protected Class<?>[] getRootConfigClasses() {
-        return new Class<?>[] { ApplicationPropertiesConfiguration.class, DataSourceConfiguration.class, WebSecurityConfig.class };
+        return new Class<?>[] { ApplicationPropertiesConfiguration.class, DatabaseConfiguration.class,
+            LiquibaseProperties.class, LiquibaseConfiguration.class, WebSecurityConfig.class };
     }
 
     @Override
