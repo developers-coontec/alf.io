@@ -76,12 +76,12 @@ ext {
     // default settings
     jettyPort = 8080
     jettyHost = '0.0.0.0'
-    datasourceDialect = 'HSQLDB'
-    datasourceDriver = 'org.hsqldb.jdbcDriver'
-    datasourceUrl = 'jdbc:hsqldb:mem:alfio'
-    datasourceUsername = 'sa'
-    datasourcePassword = ''
-    datasourceValidationQuery = 'SELECT 1 FROM INFORMATION_SCHEMA.SYSTEM_USERS'
+    datasourceDialect = 'MYSQL'
+    datasourceDriver = 'com.mysql.jdbc.Driver'
+    datasourceUrl = 'jdbc:mysql://localhost:3306/reservation'
+    datasourceUsername = 'svuser'
+    datasourcePassword = 'survey2021!1'
+    datasourceValidationQuery = 'SELECT 1'
     //springProfilesActive = 'dev,debug-csp' //enable csp report. FIXME For some reasons it doesn't work on Chrome
     //springProfilesActive = 'dev,demo'
     //springProfilesActive = 'dev,demo,jdbc-session'
@@ -102,12 +102,20 @@ ext {
             datasourcePassword = 'password'
             datasourceValidationQuery = 'SELECT 1'
             break
+        case 'dev-hsql':
+            datasourceDialect = 'HSQLDB'
+            datasourceDriver = 'org.hsqldb.jdbcDriver'
+            datasourceUrl = 'jdbc:hsqldb:mem:alfio'
+            datasourceUsername = 'sa'
+            datasourcePassword = ''
+            datasourceValidationQuery = 'SELECT 1 FROM INFORMATION_SCHEMA.SYSTEM_USERS'
+            break
         case 'dev-mysql':
             datasourceDialect = 'MYSQL'
             datasourceDriver = 'com.mysql.jdbc.Driver'
-            datasourceUrl = 'jdbc:mysql://localhost:3306/alfio'
-            datasourceUsername = 'root'
-            datasourcePassword = ''
+            datasourceUrl = 'jdbc:mysql://localhost:3306/reservation'
+            datasourceUsername = 'svuser'
+            datasourcePassword = 'survey2021!1'
             datasourceValidationQuery = 'SELECT 1'
             break
         case 'docker-test':
